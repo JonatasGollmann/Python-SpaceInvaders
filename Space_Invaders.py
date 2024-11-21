@@ -5,20 +5,20 @@ import random
 pygame.init()
 
 # Configuração de tela
-largura = 720
-altura = 640
+largura = 640       
+altura = 680
 tela = pygame.display.set_mode((largura, altura))
 pygame.display.set_caption('Space Invaders')
 clock = pygame.time.Clock()
 
 # Configuração de jogador (Nave)
-ship = pygame.image.load('assets/SpaceShip.png')
-ship = pygame.transform.scale(ship, (50, 50))
+ship = pygame.image.load('assets/UnoNave.png')
+ship = pygame.transform.scale(ship, (65, 65))
 width = ship.get_width()
 height = ship.get_height()
 xShip = largura / 2 - width / 2
 yShip = altura - height - 10
-velShip = 10
+velShip = 4.5
 
 # Configurações gerais
 player_lives = 3
@@ -33,8 +33,8 @@ bullets = []
 enemy_bullets = []
 
 # Configuração de inimigos
-enemy_image = pygame.image.load('assets/enemy.png')
-enemy_image = pygame.transform.scale(enemy_image, (40, 40))
+enemy_image = pygame.image.load('assets/enemyCat.png')
+enemy_image = pygame.transform.scale(enemy_image, (50, 50))
 enemy_width = enemy_image.get_width()
 enemy_height = enemy_image.get_height()
 enemy_vel = 1
@@ -63,7 +63,7 @@ class Bullet:
 # Criar inimigos
 def create_enemies():
     enemies = []
-    rows = 3
+    rows = 4
     cols = 6
     padding = 10
     for row in range(rows):
@@ -91,11 +91,11 @@ def check_collision(obj1, obj2):
 
 # Funções de interface
 def show_start_screen():
-    tela.fill((0, 0, 0))
-    title_text = font.render("SPACE INVADERS", True, (255, 255, 255))
-    start_text = font.render("Press ENTER to Start", True, (255, 255, 255))
-    tela.blit(title_text, (largura // 2 - title_text.get_width() // 2, altura // 3))
-    tela.blit(start_text, (largura // 2 - start_text.get_width() // 2, altura // 2))
+    bg = pygame.image.load('assets/startBg.png')
+    bg = pygame.transform.scale(bg, (largura, altura))
+    tela.blit(bg,(0,0))
+    start_text = font.render("Pressione ENTER para começar", True, (255, 255, 255))
+    tela.blit(start_text, (largura // 2 - start_text.get_width() // 2, altura // 1.30))
     pygame.display.update()
 
 def show_game_over_screen():
@@ -134,11 +134,13 @@ def main_game():
 
     # Loop do jogo
         # Dentro do main_game():
-    enemy_shoot_chance = 0.009  # Chance de um inimigo atacar em cada quadro
+    enemy_shoot_chance = 0.001 # Chance de um inimigo atacar em cada quadro
 
     while game_state == "playing":
         clock.tick(60)
-        tela.fill((0, 0, 0))
+        game_bg = pygame.image.load('assets/bg_space.png')
+        game_bg = pygame.transform.scale(game_bg, (largura, altura))
+        tela.blit(game_bg, (0, 0))
 
         # Eventos
         for event in pygame.event.get():
