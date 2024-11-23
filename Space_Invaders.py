@@ -1,304 +1,180 @@
 import pygame
 from pygame.locals import *
 import random
-
+import Config
+import Actions
+from Pages import *
 pygame.init()
 
 
-# Configuração de tela
-largura = 640       
-altura = 680
-tela = pygame.display.set_mode((largura, altura))
+# Configuração de tela e da janela
+altura = Config.Window.altura
+largura = Config.Window.largura
+tela = Config.Window.tela
 pygame.display.set_caption('Space Invaders')
-clock = pygame.time.Clock()
-
-# Configuração de jogador (Nave)
-ship = pygame.image.load('assets/media/UnoNave.png')
-ship = pygame.transform.scale(ship, (65, 65))
-width = ship.get_width()
-height = ship.get_height()
-xShip = largura / 2 - width / 2
-yShip = altura - height - 10
-velShip = 4.5
 
 # Configurações gerais
-player_lives = 3
-score = 0
-game_state = "start"  # Estados: start, playing, game_over, victory
+clock = pygame.time.Clock() # Relógio
+game_state = "start"  # Estados do jogo: start, playing, game_over, victory
+score = 0 # Pontuação
 
-# Fonte para textos
-font = pygame.font.SysFont(None, 26)
-font_small = pygame.font.SysFont(None, 16)
-
-# Lista de tiros
-bullets = []
-enemy_bullets = []
-
-# Configuração de inimigos
-enemy_image = pygame.image.load('assets/media/enemyCat.png')
-enemy_image = pygame.transform.scale(enemy_image, (50, 50))
-enemy_width = enemy_image.get_width()
-enemy_height = enemy_image.get_height()
-enemy_vel = 1
-enemy_direction = 1  # 1 para direita, -1 para esquerda
-
-
-def start_music(music_dir):
-    pygame.mixer.init()
-    pygame.mixer.music.load(music_dir)
-    pygame.mixer.music.play(-1,fade_ms=5000)
-
-# Classe Tiro
-class Bullet:
-    def __init__(self, x, y, vel, color):
-        self.x = x
-        self.y = y
-        self.vel = vel
-        self.width = 5
-        self.height = 10
-        self.color = color
-
-    def move(self):
-        self.y += self.vel
-
-    def draw(self):
-        pygame.draw.rect(tela, self.color, (self.x, self.y, self.width, self.height))
-
-    def off_screen(self):
-        return self.y < 0 or self.y > altura  # Fora da tela
-
-# Criar inimigos
-# Criar inimigos
-def create_enemies():
-    enemies = []
-    rows = 4
-    cols = 6
-    padding = 10
-    for row in range(rows):
-        for col in range(cols):
-            x = col * (enemy_width + padding) + 50
-            y = row * (enemy_height + padding) + 50
-            enemies.append({
-                "x": x,
-                "y": y,
-                "width": enemy_width,
-                "height": enemy_height,
-                "last_shot_time": 0  # Tempo do último tiro
-            })
-    return enemies
-
-
-# Verificar colisão
-def check_collision(obj1, obj2):
-    return (
-        obj1.x < obj2['x'] + obj2['width'] and
-        obj1.x + obj1.width > obj2['x'] and
-        obj1.y < obj2['y'] + obj2['height'] and
-        obj1.y + obj1.height > obj2['y']
-    )
-
-# Funções de interface
-def exibe_hud():
-    piloto = pygame.image.load('assets/media/pilotFace.png')
-    piloto = pygame.transform.scale(piloto, (70, 70))
-    vida = pygame.image.load('assets/media/Vida.png')
-    vida = pygame.transform.scale(vida, (50, 50))
-    tela.blit(piloto, (8, 10))
-    for i in range(player_lives):
-        tela.blit(vida, (50 + 20 * i, 10))
-    lives_text = font_small.render(f"Vidas: {player_lives}", True, (255, 255, 255))
-    score_text = font_small.render(f"Pontuação:", True, (255, 255, 255))
-    score_points = font.render(f"{score}", True, (255, 255, 255))
-    tela.blit(lives_text, (70, 50))
-    tela.blit(score_text, (largura - score_text.get_width() - 20, 30))
-    tela.blit(score_points, (largura - score_text.get_width() - 10, 50))
-
-def show_start_screen():
-    bg = pygame.image.load('assets/media/startBg.png')
-    bg = pygame.transform.scale(bg, (largura, altura))
-    
-    tela.blit(bg,(0,0))
-    start_text = font.render("Pressione ENTER para começar", True, (255, 255, 255))
-    tela.blit(start_text, (largura // 2 - start_text.get_width() // 2, altura // 1.30))
-    pygame.display.update()
-
-def show_game_over_screen():
-    bg = pygame.image.load('assets/media/gameoverBg.png')
-    bg = pygame.transform.scale(bg, (largura, altura))
-    tela.blit(bg,(0,0))
-    score_text = font.render(f"Pontuação: {score}", True, (255, 255, 255))
-    restart_text = font.render("Pressione R para jogar novamente", True, (255, 255, 255))
-    tela.blit(score_text, (largura // 2 - score_text.get_width() // 2, altura // 2))
-    tela.blit(restart_text, (largura // 2 - restart_text.get_width() // 2, altura // 1.5))
-    pygame.display.update()
-
-def show_victory_screen():
-    tela.fill((0, 0, 0))
-    bg = pygame.image.load('assets/media/winBg.png')
-    bg = pygame.transform.scale(bg, (largura, altura))
-    tela.blit(bg,(0,0))
-    score_text = font.render(f"Pontuação: {score}", True, (255, 255, 255))
-    restart_text = font.render("Pressione R para jogar novamente", True, (255, 255, 255))
-    tela.blit(score_text, (largura // 2 - score_text.get_width() // 2, altura // 2))
-    tela.blit(restart_text, (largura // 2 - restart_text.get_width() // 2, altura // 1.5))
-    pygame.display.update()
 
 # Função principal do jogo
 def main_game():
-    global xShip, yShip, bullets, player_lives, score, game_state, enemy_direction
+    bullets = [] # Lista de tiros
+    enemy_bullets = [] # Lista de tiros dos inimigos
+    global game_state, score
+    ship = Actions.Ship() # Inicia a nave
+    enemy = Actions.Enemy() # inicializa o inimigo
+    xShip = ship.xShip # Posição x da nave
+    yShip = ship.yShip # Posição y da nave
+    enemies = Actions.create_enemies(enemy.height, enemy.width) # Cria os inimigos
+    score = 0 # Pontuação inicial
+    last_shot_time = 0 # Ultimo tempo onde foi dado o ultimo tiro.
 
-    # Variáveis de jogo
-    enemies = create_enemies()
-    bullets = []
-    player_lives = 3
-    score = 0
-    last_shot_time = 0
-    shot_cooldown = 500
-    enemy_shoot_cooldown = 3000 
-
-    # Loop do jogoz
-    # Dentro do main_game():
-    enemy_shoot_chance = 0.001 # Chance de um inimigo atacar em cada quadro
-
+    # Loop do jogo quando está em andamento
     while game_state == "playing":
-        clock.tick(60)
-        game_bg = pygame.image.load('assets/media/bg_space.png')
-        game_bg = pygame.transform.scale(game_bg, (largura, altura))
-        tela.blit(game_bg, (0, 0))
+        clock.tick(60) 
+        show_game_screen() # Exibir tela de jogo (Background enquanto joga)
         
-        if not pygame.mixer.music.get_busy():
-            start_music('assets/sound/bgAnnaJulia.mp3')
-        # Eventos
+        if not pygame.mixer.music.get_busy(): # Se a música não estiver tocando toca a música de fundo
+            Config.Music('assets/sound/bgAnnaJulia.mp3') # Música de fundo
+        
+        # Eventos do jogo, captura qualquer evento que ocorra.
         for event in pygame.event.get():
+            #Filtragem de eventos
+            # Se o evento for de fechar a janela, fecha o jogo
             if event.type == QUIT:
                 pygame.quit()
                 exit()
+            # Se o evento for de apertar a tecla espaço, a nave atira.         
             if event.type == KEYDOWN:
                 if event.key == K_SPACE:
-                    current_time = pygame.time.get_ticks()
-                    if current_time - last_shot_time > shot_cooldown:
-                        bullet = Bullet(xShip + width / 2 - 2.5, yShip, -10, (255, 0, 0))
-                        shotSound = pygame.mixer.Sound('assets/sound/gunShip.mp3')
-                        shotSound.play()
-                        bullets.append(bullet)
-                        last_shot_time = current_time
+                    current_time = pygame.time.get_ticks() # Pega o tempo atual, para calcular o cooldown dos tiros.
+                    # Verifica se o tempo atual - o tempo do ultimo tiro é maior que o cooldown do tiro.
+                    if current_time - last_shot_time > ship.shot_cooldown:
+                        # Cria um tiro na posição da nave
+                        bullet = Actions.Bullet(xShip + ship.width / 2 - 2.5, yShip, -10, (255, 0, 0))
+                        Config.Music.efects('assets/sound/gunShip.mp3') # Efeito sonoro do tiro
+                        bullets.append(bullet) # Adiciona o tiro na lista de tiros
+                        last_shot_time = current_time # Atualiza o tempo do ultimo tiro
 
-        # Movimentação da nave
+        # Movimentação da nave do jogador, está fora do loop de eventos
+        # para que a nave se mova mesmo se não houver eventos. (Ex: Tecla pressionada)
         keys = pygame.key.get_pressed()
-        if keys[K_LEFT] and xShip > 0:
-            xShip -= velShip
-        if keys[K_RIGHT] and xShip < largura - width:
-            xShip += velShip
+        if (keys[K_LEFT] or keys[K_a]) and xShip > 0: # Se a tecla esquerda ou a for pressionada e a nave não estiver na borda esquerda
+            xShip -= ship.velShip # Move a nave para a esquerda
+        if (keys[K_RIGHT] or keys[K_d]) and xShip < largura - ship.width: # Se a tecla direita ou d for pressionada e a nave não estiver na borda direita
+            xShip += ship.velShip # Move a nave para a direita
 
-        # Atualizar inimigos
-        # Atualizar inimigos
-        move_down = False
-        current_time = pygame.time.get_ticks()
-        for enemy in enemies:
-            enemy['x'] += enemy_vel * enemy_direction
-            if enemy['x'] + enemy_width >= largura or enemy['x'] <= 0:
+        # Atualizar inimigos, movimentação e tiros dos inimigos
+        move_down = False # Variável para verificar se os inimigos devem se mover para baixo
+        current_time = pygame.time.get_ticks() # Pega o tempo atual
+        for e in enemies: 
+            e['x'] += enemy.velEnemy * enemy.directionEnemy # Movimenta os inimigos para a direção (1 para direita e -1 para esquerda)
+            if e['x'] + enemy.width >= largura or e['x'] <= 0: # Se os inimigos chegarem na borda da tela inverte a direção e move para baixo
                 move_down = True
 
-            # Verificar cooldown do tiro
-            if current_time - enemy['last_shot_time'] > enemy_shoot_cooldown:
-                if random.random() < enemy_shoot_chance:
-                    enemy_bullets.append(Bullet(enemy['x'] + enemy_width / 2, enemy['y'] + enemy_height, 5, (0, 255, 0)))
-                    enemy_shotSound = pygame.mixer.Sound('assets/sound/gunEnemy.mp3')
-                    enemy_shotSound.play()
-                    enemy['last_shot_time'] = current_time  # Atualiza o tempo do último tiro
+            # Verificar cooldown do tiro dos inimigos
+            if current_time - e['last_shot_time'] > enemy.enemy_shoot_cooldown: # Verifica se o tempo atual - o tempo do ultimo tiro é maior que o cooldown do tiro.
+                if random.random() < enemy.enemy_shoot_chance: # Se um número aleatório for menor que a chance de atirar
+                    enemy_bullets.append(Actions.Bullet(e['x'] + enemy.width / 2, e['y'] + enemy.height, 5, (0, 255, 0))) # Cria um tiro do inimigo
+                    Config.Music.efects('assets/sound/gunEnemy.mp3') # Efeito sonoro do tiro
+                    e['last_shot_time'] = current_time  # Atualiza o tempo do último tiro
 
-        if move_down:
-            enemy_direction *= -1
-            for enemy in enemies:
-                enemy['y'] += enemy_height // 2
+        if move_down: # Se os inimigos devem se mover para baixo (chegaram na borda da tela) ele inverte o lado para qual estavam se movimentando
+            enemy.directionEnemy *= -1
+            for e in enemies:
+                e['y'] += enemy.height // 2
 
-        # Atualizar tiros do jogador
+        # Atualizar tiros do jogador e verificar colisões
         for bullet in bullets[:]:
             bullet.move()
             bullet.draw()
-            for enemy in enemies[:]:
-                if check_collision(bullet, enemy):
-                    enemies.remove(enemy)
-                    bullets.remove(bullet)
-                    score += 50
+            for e in enemies[:]:
+                # Verifica se houve colisão entre o tiro e o inimigo
+                if Actions.check_collision(bullet, e):
+                    enemies.remove(e) # Remove o inimigo
+                    bullets.remove(bullet) # Remove o tiro
+                    score += 50 # Adiciona 50 pontos a pontuação
                     break
-            if bullet.off_screen():
+            if bullet.off_screen(): # Se o tiro sair da tela, remove o tiro e diminui 10 pontos da pontuação
                 bullets.remove(bullet)
                 score -= 10
 
         # Atualizar tiros dos inimigos
-        for e_bullet in enemy_bullets[:]:
+        for e_bullet in enemy_bullets[:]: # Para cada tiro dos inimigos, atualiza a posição e verifica colisões.
             e_bullet.move()
             e_bullet.draw()
             if (
-                xShip < e_bullet.x < xShip + width and
-                yShip < e_bullet.y < yShip + height
-            ):
-                damageSound = pygame.mixer.Sound('assets/sound/damageShip.mp3')
-                damageSound.play()
-                score -= 25
-                player_lives -= 1
-                enemy_bullets.remove(e_bullet)
-            elif e_bullet.off_screen():
-                enemy_bullets.remove(e_bullet)
+                xShip < e_bullet.x < xShip + ship.width and
+                yShip < e_bullet.y < yShip + ship.height
+            ): # Verifica se houve colisão entre o tiro do inimigo e a nave e executa som de dano e remove o tiro.
+                Config.Music.efects('assets/sound/damageShip.mp3')
+                
+                score -= 25 # Diminui 25 pontos da pontuação
+                ship.lives -= 1 # Diminui uma vida da nave
+                enemy_bullets.remove(e_bullet) # Remove o tiro
+            elif e_bullet.off_screen(): # Se o tiro sair da tela, remove o tiro
+                enemy_bullets.remove(e_bullet) # Remove o tiro
 
         # Exibir HUD
-        exibe_hud()
+        display_hud(player_lives=ship.lives, score=score)
 
         # Desenhar nave e inimigos
-        tela.blit(ship, (xShip, yShip))
-        for enemy in enemies:
-            tela.blit(enemy_image, (enemy['x'], enemy['y']))
+        tela.blit(ship.ship, (xShip, yShip)) # Desenha a nave na tela
+        for e in enemies:
+            tela.blit(enemy.enemy, (e['x'], e['y'])) # Desenha os inimigos na tela
 
-        pygame.display.update()
+        pygame.display.update() # Atualiza a tela do jogo a cada nova atualização de ações.
 
     # Checar vitória ou derrota
-        if not enemies:
-            game_state = "victory"
-            pygame.mixer.music.stop()
-        if player_lives <= 0:
-            game_state = "game_over"
-            pygame.mixer.music.stop()
+        if not enemies: 
+            game_state = "victory" # Se não houver mais inimigos, o jogador venceu
+            Config.Music.stop() # Para a música de fundo
+        if ship.lives <= 0: # Se a nave não tiver mais vidas, o jogador perdeu
+            game_state = "game_over" # Muda o estado do jogo para game_over
+            Config.Music.stop() # Para a música de fundo
 
 
 # Loop principal
 while True:
-    if game_state == "start":
-        show_start_screen()
-        if not pygame.mixer.music.get_busy():
-            start_music('assets/sound/bgTemPerdido.mp3')
-        for event in pygame.event.get():
-            if event.type == QUIT:
+    if game_state == "start": # Se o estado do jogo for start, exibe a tela inicial
+        show_start_screen() # Exibe a tela inicial
+        if not pygame.mixer.music.get_busy(): # Se a música não estiver tocando toca a música de fundo
+            Config.Music('assets/sound/bgTemPerdido.mp3')
+        for event in pygame.event.get(): # Eventos da tela inicial
+            if event.type == QUIT: # Se o evento for de fechar a janela, fecha o jogo
                 pygame.quit()
                 exit()
-            if event.type == KEYDOWN and event.key == K_RETURN:
+            if event.type == KEYDOWN and event.key == K_RETURN: # Se o evento for de apertar a tecla enter, inicia o jogo
+                game_state = "playing" # Muda o estado do jogo para playing
+                Config.Music.stop() # Para a música de fundo da pagina inicial
+                main_game()  # Inicia o jogo
+
+    elif game_state == "game_over": # Se o estado do jogo for game_over, exibe a tela de game_over
+        show_game_over_screen(score) # Exibe a tela de game_over
+        if not pygame.mixer.music.get_busy(): # Se a música não estiver tocando toca a música de fundo
+            Config.Music('assets/sound/bgVascou.mp3') # Música de fundo
+        for event in pygame.event.get(): # Eventos da tela de game_over
+            if event.type == QUIT: # Se o evento for de fechar a janela, fecha o jogo
+                pygame.quit()
+                exit()
+            if event.type == KEYDOWN and event.key == K_r: # Se o evento for de apertar a tecla r, reinicia o jogo
+                Config.Music.stop()
                 game_state = "playing"
-                pygame.mixer.music.stop()
                 main_game()
 
-    elif game_state == "game_over":
-        show_game_over_screen()
-        if not pygame.mixer.music.get_busy():
-            start_music('assets/sound/bgVascou.mp3')
-        for event in pygame.event.get():
-            if event.type == QUIT:
+    elif game_state == "victory": # Se o estado do jogo for victory, exibe a tela de vitória
+        show_victory_screen(score) # Exibe a tela de vitória
+        if not pygame.mixer.music.get_busy(): # Se a música não estiver tocando toca a música de fundo
+            Config.Music('assets/sound/bgCorVerAma.mp3')
+        for event in pygame.event.get(): # Eventos da tela de vitória
+            if event.type == QUIT: # Se o evento for de fechar a janela, fecha o jogo
                 pygame.quit()
                 exit()
-            if event.type == KEYDOWN and event.key == K_r:
-                pygame.mixer.music.stop()
-                game_state = "playing"
-                main_game()
-
-    elif game_state == "victory":
-        show_victory_screen()
-        if not pygame.mixer.music.get_busy():
-            start_music('assets/sound/bgCorVerAma.mp3')
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                pygame.quit()
-                exit()
-            if event.type == KEYDOWN and event.key == K_r:
-                pygame.mixer.music.stop()
+            if event.type == KEYDOWN and event.key == K_r: # Se o evento for de apertar a tecla r, reinicia o jogo
+                Config.Music.stop()
                 game_state = "playing"
                 main_game()
     
