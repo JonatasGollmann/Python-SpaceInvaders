@@ -10,7 +10,16 @@ Foram utilizadas as seguintes tecnologias.
 - PyGame
 - Piskel (Desenvolvimento dos sprites usados no jogo)
 
-#### Sobre o jogo:
+### Sobre o jogo:
+Para executar o jogo deve executar o arquivo Space_Invaders.py no terminal, estando dentro do diretorio, da seguinte forma:
+
+**python Space_Invaders.py**
+
+ ou
+
+ **py Space_Invaders.py**
+
+### O jogo conta com as seguintes features:
 - Conta com pontuação dinâmica, onde:
     - Cada inimigo abatido é  **+50 pontos.**
     - Cada tiro que não é acertado **-10 pontos**
